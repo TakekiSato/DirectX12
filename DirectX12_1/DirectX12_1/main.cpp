@@ -7,9 +7,11 @@
 #include <dxgi1_6.h>
 #include <vector>
 #include <DirectXMath.h>
+#include <d3dcompiler.h>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3dcompiler.lib")
 
 #define WINDOW_CLASS_NAME TEXT("DirectX12Sample")
 
@@ -249,6 +251,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     vbView.BufferLocation = vertBuff->GetGPUVirtualAddress();  // バッファーの仮想アドレス
     vbView.SizeInBytes = sizeof(vertices);  // 全バイト数
     vbView.StrideInBytes = sizeof(vertices[0]);  // 1頂点あたりのバイト数
+
+    ID3DBlob* _vsBlob = nullptr;
+    ID3DBlob* _psBlob = nullptr;
+    ID3DBlob* errorBlob = nullptr;
+
+    // 頂点シェーダーの読み込み
+    result = D3DCompileFromFile(
+        L"BasicVertexShader.hlsl",  // シェーダー名
+        nullptr,  // defineはなし
+        D3D_COMPILE_STANDARD_FILE_INCLUDE, // インクルードはデフォルト
+        "BasicVS", "vs_5_0",  // 関数はBasicVS、対象シェーダーはvs_5_0
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,  // デバッグ用及び最適化なし
+        0,
+        &_vsBlob, &errorBlob  // エラー時はerrorBlobにメッセージが入る
+    );
+    // ピクセルシェーダーの読み込み
+    result = D3DCompileFromFile(
+        L"BasicPixelShader.hlsl",
+        nullptr,
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "BasicPS", "ps_5_0", // 関数はBasicPS、対象シェーダーはps_5_0
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0,
+        &_psBlob, &errorBlob
+    );
 
     MSG msg{};
     while (true)
