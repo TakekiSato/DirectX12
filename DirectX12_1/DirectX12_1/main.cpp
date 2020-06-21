@@ -339,6 +339,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // 入力レイアウト設定
     gpipeline.InputLayout.pInputElementDescs = inputLayout;  // レイアウト先頭アドレス
     gpipeline.InputLayout.NumElements = _countof(inputLayout);  // レイアウト配列の要素数
+    gpipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;  // カットなし
+    gpipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;  // 三角形で構成
+    // レンダーターゲットの設定
+    gpipeline.NumRenderTargets = 1; // 今は１つのみ
+    gpipeline.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // 0~1に正規化されたRGBA
+    // アンチエイリアシングのためのサンプル数設定
+    gpipeline.SampleDesc.Count = 1; // サンプリングは1ピクセルにつき1
+    gpipeline.SampleDesc.Quality = 0; // クオリティは最低設定
 
     MSG msg{};
     while (true)
