@@ -266,6 +266,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         0,
         &_vsBlob, &errorBlob  // エラー時はerrorBlobにメッセージが入る
     );
+    if (FAILED(result)) {
+        if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+            ::OutputDebugStringA("ファイルが見当たりません");
+        }
+        else {
+            std::string errstr;
+            errstr.resize(errorBlob->GetBufferSize());
+            std::copy_n((char*)errorBlob->GetBufferPointer(),
+                errorBlob->GetBufferSize(),
+                errstr.begin());
+            errstr += "\n";
+            ::OutputDebugStringA(errstr.c_str());
+        }
+        exit(1);  // 強制終了？
+    }
+
     // ピクセルシェーダーの読み込み
     result = D3DCompileFromFile(
         L"BasicPixelShader.hlsl",
@@ -276,6 +292,53 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         0,
         &_psBlob, &errorBlob
     );
+    if (FAILED(result)) {
+        if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+            ::OutputDebugStringA("ファイルが見当たりません");
+        }
+        else {
+            std::string errstr;
+            errstr.resize(errorBlob->GetBufferSize());
+            std::copy_n((char*)errorBlob->GetBufferPointer(),
+                errorBlob->GetBufferSize(),
+                errstr.begin());
+            errstr += "\n";
+            ::OutputDebugStringA(errstr.c_str());
+        }
+        exit(1);  // 強制終了？
+    }
+
+    // 頂点レイアウトの定義
+    D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    };
+
+    // グラフィックスパイプラインの設定
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
+    gpipeline.pRootSignature = nullptr;  // 後ほど設定
+    // シェーダーのセット(頂点シェーダー＆ピクセルシェーダー)
+    gpipeline.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
+    gpipeline.VS.BytecodeLength = _vsBlob->GetBufferSize();
+    gpipeline.PS.pShaderBytecode = _psBlob->GetBufferPointer();
+    gpipeline.PS.BytecodeLength = _psBlob->GetBufferSize();
+    // デフォルトのサンプルマスクを表す定数(0xffffffff)
+    gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    // まだアンチエイリアスは使わないためfalse
+    gpipeline.RasterizerState.MultisampleEnable = false;
+    gpipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;  // カリングしない
+    gpipeline.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;  // 中身を塗りつぶす
+    gpipeline.RasterizerState.DepthClipEnable = true;  // 震度方向のクリッピングは有効に
+    // ブレンドステート設定
+    gpipeline.BlendState.AlphaToCoverageEnable = false;
+    gpipeline.BlendState.IndependentBlendEnable = false;
+    D3D12_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc = {};
+    renderTargetBlendDesc.BlendEnable = false;
+    renderTargetBlendDesc.LogicOpEnable = false;
+    renderTargetBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    gpipeline.BlendState.RenderTarget[0] = renderTargetBlendDesc;
+    // 入力レイアウト設定
+    gpipeline.InputLayout.pInputElementDescs = inputLayout;  // レイアウト先頭アドレス
+    gpipeline.InputLayout.NumElements = _countof(inputLayout);  // レイアウト配列の要素数
 
     MSG msg{};
     while (true)
