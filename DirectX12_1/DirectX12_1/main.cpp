@@ -347,6 +347,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // アンチエイリアシングのためのサンプル数設定
     gpipeline.SampleDesc.Count = 1; // サンプリングは1ピクセルにつき1
     gpipeline.SampleDesc.Quality = 0; // クオリティは最低設定
+    
+
+    // ルートシグネチャの作成
+    ID3D12RootSignature* rootsignature = nullptr;
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT; // 頂点情報(入力アセンブラ)がある
+    ID3DBlob* rootSigBlob = nullptr;
+    result = D3D12SerializeRootSignature(
+        &rootSignatureDesc, // ルートシグネチャ設定
+        D3D_ROOT_SIGNATURE_VERSION_1_0, // ルートシグネチャバージョン
+        &rootSigBlob,
+        &errorBlob);
+    result = _dev->CreateRootSignature(
+        0, // nodemask。0でよい
+        rootSigBlob->GetBufferPointer(), // シェーダーの時と同様
+        rootSigBlob->GetBufferSize(), // シェーダーの時と同様
+        IID_PPV_ARGS(&rootsignature));
+    gpipeline.pRootSignature = rootsignature;
+
+    // グラフィックスパイプラインステートオブジェクトの生成
+    ID3D12PipelineState* _pipelinestate = nullptr;
+    result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate));
 
     MSG msg{};
     while (true)
