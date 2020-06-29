@@ -1,11 +1,8 @@
-struct Output {
-	float4 pos:POSITION;
-	float4 svpos:SV_POSITION;
-};
+#include "BasicShaderHeader.hlsli"
 
-Output BasicVS(float4 pos : POSITION) {
-	Output output;
-	output.pos = pos;
+Output BasicVS(float4 pos : POSITION, float2 uv : TEXCOORD) {
+	Output output; // ピクセルシェーダーに渡す値
 	output.svpos = pos;
+	output.uv = uv;
 	return output;
 }

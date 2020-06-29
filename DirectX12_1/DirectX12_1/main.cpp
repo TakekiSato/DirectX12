@@ -325,7 +325,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     // 頂点レイアウトの定義
     D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { // 座標情報 
+            "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 
+            D3D12_APPEND_ALIGNED_ELEMENT, 
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 
+        },
+        { // uv(追加)
+            "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,
+            0, D3D12_APPEND_ALIGNED_ELEMENT,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+        },
     };
 
     // グラフィックスパイプラインの設定
@@ -426,6 +435,52 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     scissorrect.left = 0; // 切り抜き左座標
     scissorrect.right = scissorrect.left + window_width; // 切り抜き右座標
     scissorrect.bottom = scissorrect.top + window_height; // 切り抜き左座標
+
+    // 仮のノイズテクスチャの作成
+    struct TexRGBA {
+        unsigned char R, G, B, A;
+    };
+    std::vector<TexRGBA> texturedata(256 * 256);
+    for (auto& rgba : texturedata) {
+        rgba.R = rand() % 256;
+        rgba.G = rand() % 256;
+        rgba.B = rand() % 256;
+        rgba.A = 255; // αは1.0とする
+    }
+    // テクスチャバッファーの作成
+    // WriteToSubresourceで転送するためのヒープ設定
+    D3D12_HEAP_PROPERTIES texHeapProp = {};
+    // 特殊な設定なのでDEFAULTでもUPLOADでもない
+    texHeapProp.Type = D3D12_HEAP_TYPE_CUSTOM;
+    // ライトバック
+    texHeapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
+    // 転送はL0、つまりCPU側から直接行う
+    texHeapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
+    // 単一アダプターのため0
+    texHeapProp.CreationNodeMask = 0;
+    texHeapProp.VisibleNodeMask = 0;
+
+    // リソースの設定
+    D3D12_RESOURCE_DESC resDesc = {};
+    resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // RGBAフォーマット
+    resDesc.Width = 256; // 幅
+    resDesc.Height = 256; // 高さ
+    resDesc.DepthOrArraySize = 1; // 2Dで配列でもないので1
+    resDesc.SampleDesc.Count = 1; // 通常テクスチャなのでアンチエイリアシングしない
+    resDesc.SampleDesc.Quality = 0; // クオリティは最低
+    resDesc.MipLevels = 1; // ミップマップしないのでミップ数は１つ
+    resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // 2Dテクスチャ用
+    resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN; // レイアウトは決定しない
+    resDesc.Flags = D3D12_RESOURCE_FLAG_NONE; // 特にフラグなし
+
+    // リソースの生成
+    ID3D12Resource* texbuff = nullptr;
+    result = _dev->CreateCommittedResource(&texHeapProp,
+        D3D12_HEAP_FLAG_NONE, // 特に指定なし
+        &resDesc,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, // テクスチャ用設定
+        nullptr,
+        IID_PPV_ARGS(&texbuff));
 
     MSG msg{};
     unsigned int frame = 0;
